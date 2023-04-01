@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letterboxd reader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-aFq/bzH65dt+w6FI2ooMVUpc+21e0SRygnTpmBvdBgSdnuTN7QbdgL+OapgHtvPp" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <style>
+        .table-responsive {
+            max-height: 800px;
+            overflow-y: auto;
+        }
+    </style>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Letterboxd PDF exporter</h1>
+        <div class="row justify-content-center">
+          <div class="col-md-8">
+            <input type="file" id="csv-file-input" class="form-control-file mb-3">
+            <div class="table-responsive">
+            <table id="movies-table" class="table table-striped table-bordered">
+              <thead class="thead-dark">
+                <tr>
+                  <th>Date</th>
+                  <th>Title</th>
+                  <th>Year</th>
+                  <th>Letterbox URL</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+            </div>
+            <button id="export-pdf-button" class="btn btn-primary mt-3">Export to PDF</button>
+          </div>
+        </div>
+      </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js" integrity="sha512-03CCNkeosDFN2zCCu4vLpu3pJfZcrL48F3yB8k87ejT+OVMwco7IH3FW02vtbGhdncS6gyYZ/duYaC/K62xQPQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script>
+        window.jsPDF = window.jspdf.jsPDF
+
+        const csvFileInput = document.getElementById('csv-file-input');
+        const moviesTableBody = document.querySelector('#movies-table tbody');
+        const exportPdfButton = document.getElementById('export-pdf-button');
+
+        csvFileInput.addEventListener('change', handleCsvFileSelect);
+        exportPdfButton.addEventListener('click', handleExportPdfButtonClick);
+
+        function handleCsvFileSelect(event) {
+        const file = event.target.files[0];
+        const reader = new FileReader();
+        
+        reader.addEventListener('load', handleCsvFileLoad);
+        reader.readAsText(file);
+        }
+
+        function handleCsvFileLoad(event) {
+        const csv = event.target.result;
+        const lines = csv.split('\n');
+        const headers = lines[0].split(',');
+
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',');
+            const row = document.createElement('tr');
+
+            for (let j = 0; j < headers.length; j++) {
+            const cell = document.createElement('td');
+            cell.textContent = values[j];
+            row.appendChild(cell);
+            }
+
+            moviesTableBody.appendChild(row);
+        }
+        }
+
+        function handleExportPdfButtonClick() {
+            const doc = new jsPDF();
+
+            // Prompt for title
+            const title = prompt("Enter a title for your PDF file:", "Your Letterboxd movie list");
+            if (!title) {
+                return; // Cancelled or empty input
+            }
+            const titleWidth = doc.getStringUnitWidth(title) * doc.internal.getFontSize() / doc.internal.scaleFactor;
+            const pageWidth = doc.internal.pageSize.width;
+            const x = (pageWidth - titleWidth) / 2;
+            const y = 20;
+            doc.setFontSize(20);
+            doc.text(title, x, y);
+
+            // Add table
+            const tableY = y + 20; // Set margin between title and table
+            doc.autoTable({ html: '#movies-table', startY: tableY });
+
+            // Generate data URL
+            const pdfDataUri = doc.output('datauristring');
+
+            // Open in new window
+            const newWindow = window.open();
+            newWindow.document.write('<iframe src="' + pdfDataUri + '" width="100%" height="100%"></iframe>');
+        }
+    </script>
+</body>
+</html>
